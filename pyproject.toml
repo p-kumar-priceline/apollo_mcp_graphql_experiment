@@ -6,10 +6,24 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "aiosqlite>=0.21.0",
+    "boto3>=1.40.13",
+    "dspy>=2.6.27",
+    "fastapi>=0.116.1",
     "fastmcp>=2.10.5",
+    "httpx>=0.28.1",
+    "jupyter>=1.1.1",
     "llama-index-llms-ollama>=0.6.2",
     "llama-index-tools-mcp>=0.2.6",
+    "matplotlib>=3.10.5",
+    "numpy>=2.2.6",
+    "pandas>=2.3.1",
+    "plotly>=6.3.0",
     "pydantic-settings>=2.10.1",
+    "pytest>=8.4.1",
+    "scipy>=1.15.3",
+    "seaborn>=0.13.2",
+    "streamlit>=1.48.1",
+    "uvicorn>=0.35.0",
 ]
 
 [dependency-groups]
