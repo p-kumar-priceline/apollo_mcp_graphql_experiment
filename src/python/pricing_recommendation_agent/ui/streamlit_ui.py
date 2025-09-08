@@ -19,9 +19,11 @@ import os
 import boto3
 from botocore.exceptions import ClientError, NoCredentialsError
 
+# Import our configuration system
+from config.config import get_config, reload_config
 
-# Configuration
-API_BASE_URL = "http://localhost:8000"
+# Load configuration
+config = get_config()
 
 # Page configuration
 st.set_page_config(
@@ -102,12 +104,14 @@ def make_api_request(
         API response
     """
     try:
-        url = f"{API_BASE_URL}{endpoint}"
+        url = f"{config.server_config.api_base_url}{endpoint}"
 
         if method == "GET":
-            response = requests.get(url)
+            response = requests.get(url, timeout=config.server_config.api_timeout)
         elif method == "POST":
-            response = requests.post(url, json=data)
+            response = requests.post(
+                url, json=data, timeout=config.server_config.api_timeout
+            )
         else:
             raise ValueError(f"Unsupported method: {method}")
 
@@ -133,26 +137,28 @@ def initialize_chat_session():
 
 def get_bedrock_client():
     """
-    Initialize AWS Bedrock client using access keys.
+    Initialize AWS Bedrock client using configuration.
 
     Returns:
         Bedrock client or None if credentials are not available
     """
     try:
-        # Check for AWS credentials
-        aws_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
-        aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
-        aws_region = os.getenv("AWS_DEFAULT_REGION", "us-east-1")
+        # Get configuration
+        config = get_config()
 
-        if not aws_access_key_id or not aws_secret_access_key:
+        # Check for AWS credentials
+        if (
+            not config.llm_config.aws_access_key_id
+            or not config.llm_config.aws_secret_access_key
+        ):
             return None
 
         # Initialize Bedrock client
         bedrock_client = boto3.client(
             service_name="bedrock-runtime",
-            region_name=aws_region,
-            aws_access_key_id=aws_access_key_id,
-            aws_secret_access_key=aws_secret_access_key,
+            region_name=config.llm_config.aws_region,
+            aws_access_key_id=config.llm_config.aws_access_key_id,
+            aws_secret_access_key=config.llm_config.aws_secret_access_key,
         )
 
         return bedrock_client
@@ -255,21 +261,17 @@ def get_llm_response(
         LLM response
     """
     try:
-        # Check for LLM provider preference
-        llm_provider = os.getenv("LLM_PROVIDER", "openai").lower()
+        # Reload configuration to get latest settings
+        reload_config()
+        config = get_config()
+
+        # Validate configuration
+        validation = config.validate_llm_config()
+        if not validation["is_valid"]:
+            return f"⚠️ Configuration error: {'; '.join(validation['issues'])}"
 
         # Prepare system message with context
-        system_message = """You are an AI assistant for a pricing recommendation agent in the travel industry. 
-        You help revenue management teams understand pricing optimization opportunities and provide insights.
-        
-        Your role is to:
-        1. Analyze pricing data and recommendations
-        2. Explain statistical findings in business terms
-        3. Suggest actions based on recommendations
-        4. Answer questions about profitability, volume, availability, and inventory
-        5. Provide context and insights for decision-making
-        
-        Be helpful, professional, and focus on actionable insights."""
+        system_message = config.llm_config.system_message
 
         # Add context if available
         if context_data:
@@ -288,32 +290,28 @@ def get_llm_response(
             {"role": "user", "content": user_message},
         ]
 
-        if llm_provider == "bedrock":
+        if config.llm_config.provider == "bedrock":
             # Use AWS Bedrock
             bedrock_client = get_bedrock_client()
             if not bedrock_client:
-                return "⚠️ AWS Bedrock credentials not found. Please set AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and optionally AWS_DEFAULT_REGION environment variables."
+                return "⚠️ AWS Bedrock credentials not found. Please check your configuration."
 
-            # Get model ID from environment or use default
-            model_id = os.getenv(
-                "BEDROCK_MODEL_ID", "anthropic.claude-3-sonnet-20240229-v1:0"
+            return invoke_bedrock_model(
+                bedrock_client, config.llm_config.bedrock_model_id, messages
             )
-
-            return invoke_bedrock_model(bedrock_client, model_id, messages)
 
         else:
             # Use OpenAI (default)
-            api_key = os.getenv("OPENAI_API_KEY")
-            if not api_key:
-                return "⚠️ OpenAI API key not found. Please set the OPENAI_API_KEY environment variable to use the chat feature."
+            if not config.llm_config.openai_api_key:
+                return "⚠️ OpenAI API key not found. Please check your configuration."
 
             # Call OpenAI API
-            client = openai.OpenAI(api_key=api_key)
+            client = openai.OpenAI(api_key=config.llm_config.openai_api_key)
             response = client.chat.completions.create(
-                model="gpt-3.5-turbo",
+                model=config.llm_config.openai_model,
                 messages=messages,
-                max_tokens=500,
-                temperature=0.7,
+                max_tokens=config.llm_config.openai_max_tokens,
+                temperature=config.llm_config.openai_temperature,
             )
 
             content = response.choices[0].message.content
@@ -866,26 +864,42 @@ def main():
     # Chat setup instructions
     if page == "Chat Assistant":
         st.sidebar.markdown("---")
-        st.sidebar.markdown("**Chat Setup**")
+        st.sidebar.markdown("**Chat Configuration**")
 
-        # Show current LLM provider
-        llm_provider = os.getenv("LLM_PROVIDER", "openai").lower()
-        st.sidebar.markdown(f"**Current Provider:** {llm_provider.upper()}")
+        # Show current configuration
+        config_summary = config.get_config_summary()
+        validation = config_summary["llm_validation"]
 
-        if llm_provider == "openai":
-            st.sidebar.markdown("To use OpenAI, set:")
-            st.sidebar.code("export OPENAI_API_KEY='your-api-key-here'")
+        st.sidebar.markdown(f"**Provider:** {validation['provider'].upper()}")
+
+        if validation["is_valid"]:
+            st.sidebar.success("✅ Configuration Valid")
+
+            if validation["provider"] == "openai":
+                st.sidebar.markdown(f"**Model:** {config.llm_config.openai_model}")
+            else:
+                st.sidebar.markdown(f"**Model:** {config.llm_config.bedrock_model_id}")
+                st.sidebar.markdown(f"**Region:** {config.llm_config.aws_region}")
         else:
-            st.sidebar.markdown("To use AWS Bedrock, set:")
-            st.sidebar.code("export AWS_ACCESS_KEY_ID='your-access-key'")
-            st.sidebar.code("export AWS_SECRET_ACCESS_KEY='your-secret-key'")
-            st.sidebar.code("export AWS_DEFAULT_REGION='us-east-1'")
-            st.sidebar.code(
-                "export BEDROCK_MODEL_ID='anthropic.claude-3-sonnet-20240229-v1:0'"
-            )
+            st.sidebar.error("❌ Configuration Issues")
+            for issue in validation["issues"]:
+                st.sidebar.markdown(f"• {issue}")
 
-        st.sidebar.markdown("To switch providers, set:")
-        st.sidebar.code("export LLM_PROVIDER='openai'  # or 'bedrock'")
+        # Configuration help
+        with st.sidebar.expander("🔧 Configuration Help"):
+            st.markdown("**Setup Steps:**")
+            st.markdown("1. Copy `config.env.example` to `.env`")
+            st.markdown("2. Edit `.env` with your credentials")
+            st.markdown("3. Run: `python setup_config.py`")
+            st.markdown("4. Restart the application")
+
+            st.markdown("**Environment Variables:**")
+            if validation["provider"] == "openai":
+                st.code("LLM_PROVIDER=openai\nOPENAI_API_KEY=your-key")
+            else:
+                st.code(
+                    "LLM_PROVIDER=bedrock\nAWS_ACCESS_KEY_ID=your-key\nAWS_SECRET_ACCESS_KEY=your-secret"
+                )
 
 
 if __name__ == "__main__":

@@ -12,8 +12,8 @@ from typing import Dict, Any, Optional
 # Add the current directory to the path so we can import our modules
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from pricing_recommendation_agent import PricingRecommendationAgent, AnalysisConfig
-from data_simulator import DataSimulator
+from core.pricing_recommendation_agent import PricingRecommendationAgent, AnalysisConfig
+from core.data_simulator import DataSimulator
 
 
 def simulate_chat_interaction():
@@ -66,8 +66,8 @@ def simulate_chat_interaction():
     print("\n✅ Chat demo completed!")
     print("\nTo use the real chat interface:")
     print("1. Set your OpenAI API key: export OPENAI_API_KEY='your-key-here'")
-    print("2. Start the MCP server: python mcp_server.py")
-    print("3. Launch the Streamlit UI: streamlit run streamlit_ui.py")
+    print("2. Start the MCP server: python server/mcp_server.py")
+    print("3. Launch the Streamlit UI: streamlit run ui/streamlit_ui.py")
     print("4. Navigate to the 'Chat Assistant' page")
 
 

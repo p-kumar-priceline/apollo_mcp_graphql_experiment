@@ -17,12 +17,12 @@ import asyncio
 from concurrent.futures import ThreadPoolExecutor
 
 # Import our agent and data simulator
-from pricing_recommendation_agent import (
+from core.pricing_recommendation_agent import (
     PricingRecommendationAgent,
     AnalysisConfig,
     Recommendation,
 )
-from data_simulator import DataSimulator
+from core.data_simulator import DataSimulator
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

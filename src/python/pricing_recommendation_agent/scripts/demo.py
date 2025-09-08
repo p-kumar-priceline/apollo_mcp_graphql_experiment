@@ -13,8 +13,8 @@ from datetime import datetime
 from typing import Dict, List, Any
 
 # Import our modules
-from pricing_recommendation_agent import PricingRecommendationAgent, AnalysisConfig
-from data_simulator import DataSimulator
+from core.pricing_recommendation_agent import PricingRecommendationAgent, AnalysisConfig
+from core.data_simulator import DataSimulator
 
 
 def print_separator(title: str):
@@ -213,7 +213,7 @@ def demo_api_endpoints():
             return
     except httpx.RequestError:
         print("❌ Cannot connect to server. Make sure it's running on localhost:8000")
-        print("To start the server, run: python mcp_server.py")
+        print("To start the server, run: python server/mcp_server.py")
         return
 
     # Test generating recommendations
@@ -267,8 +267,8 @@ def main():
     print_separator("Demo Complete")
     print("🎉 Demo completed successfully!")
     print("\nNext steps:")
-    print("1. Start the MCP server: python mcp_server.py")
-    print("2. Launch the Streamlit UI: streamlit run streamlit_ui.py")
+            print("1. Start the MCP server: python server/mcp_server.py")
+    print("2. Launch the Streamlit UI: streamlit run ui/streamlit_ui.py")
     print("3. Open http://localhost:8501 in your browser")
     print("4. Explore the interactive interface")
 

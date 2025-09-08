@@ -239,8 +239,8 @@ def main():
 
     print("\n🎉 Setup complete!")
     print("\nNext steps:")
-    print("1. Start the MCP server: python mcp_server.py")
-    print("2. Launch the Streamlit UI: streamlit run streamlit_ui.py")
+    print("1. Start the MCP server: python server/mcp_server.py")
+    print("2. Launch the Streamlit UI: streamlit run ui/streamlit_ui.py")
     print("3. Navigate to the 'Chat Assistant' page")
     print("4. Start chatting with your configured LLM!")
 

@@ -47,6 +47,8 @@ The system consists of several components:
 
 - Python 3.8+
 - pip or conda for package management
+- AWS Bedrock access (for LLM chat functionality)
+- OpenAI API key (alternative LLM option)
 
 ### Installation
 
@@ -60,50 +62,151 @@ The system consists of several components:
    pip install -r requirements.txt
    ```
 
-3. **Run the demo to test the system:**
+3. **Set up configuration:**
+   ```bash
+   # Run the interactive setup script
+   python setup_config.py
+   ```
+   
+   This will:
+   - Create a `.env` file from the template
+   - Guide you through configuration
+   - Test your LLM credentials
+   - Validate the setup
+
+4. **Run the demo to test the system:**
    ```bash
    python demo.py
    ```
 
-4. **Set up LLM for chat functionality (optional):**
-   ```bash
-   python setup_llm.py
-   ```
-
 ### Running the Full System
 
-1. **Start the MCP server:**
+#### Step 1: Configure LLM Credentials
+
+**Option A: TOML Configuration (Recommended)**
+1. **Copy the TOML configuration template:**
+   ```bash
+   cp config.toml.example config.toml
+   ```
+
+2. **Edit the `config.toml` file with your AWS credentials:**
+   ```toml
+   [llm]
+   provider = "bedrock"
+   
+   [llm.bedrock]
+   aws_access_key_id = "your-aws-access-key-id-here"
+   aws_secret_access_key = "your-aws-secret-access-key-here"
+   aws_region = "us-east-1"
+   model_id = "anthropic.claude-3-sonnet-20240229-v1:0"
+   max_tokens = 500
+   temperature = 0.7
+   top_p = 0.9
+   ```
+
+3. **Test your configuration:**
+   ```bash
+   python setup_config.py test
+   ```
+
+**Option B: Environment Variables**
+1. **Copy the environment template:**
+   ```bash
+   cp config.env.example .env
+   ```
+
+2. **Edit the `.env` file with your AWS credentials:**
+   ```bash
+   # Choose AWS Bedrock as provider
+   LLM_PROVIDER=bedrock
+   
+   # Your AWS credentials
+   AWS_ACCESS_KEY_ID=your-aws-access-key-id-here
+   AWS_SECRET_ACCESS_KEY=your-aws-secret-access-key-here
+   AWS_DEFAULT_REGION=us-east-1
+   
+   # Bedrock model (recommended: Claude 3 Sonnet)
+   BEDROCK_MODEL_ID=anthropic.claude-3-sonnet-20240229-v1:0
+   ```
+
+**Option C: OpenAI**
+1. **For TOML configuration, edit `config.toml`:**
+   ```toml
+   [llm]
+   provider = "openai"
+   
+   [llm.openai]
+   api_key = "your-openai-api-key-here"
+   model = "gpt-3.5-turbo"
+   max_tokens = 500
+   temperature = 0.7
+   ```
+
+2. **For environment variables, edit `.env`:**
+   ```bash
+   # Choose OpenAI as provider
+   LLM_PROVIDER=openai
+   
+   # Your OpenAI API key
+   OPENAI_API_KEY=your-openai-api-key-here
+   
+   # OpenAI model
+   OPENAI_MODEL=gpt-3.5-turbo
+   ```
+
+#### Step 2: Start the MCP Server
+
+1. **Start the MCP server in one terminal:**
    ```bash
    python mcp_server.py
    ```
+   
    The server will be available at `http://localhost:8000`
+   
+   You should see output like:
+   ```
+   INFO:     Started server process [12345]
+   INFO:     Waiting for application startup.
+   INFO:     Application startup complete.
+   INFO:     Uvicorn running on http://0.0.0.0:8000
+   ```
 
-2. **Launch the Streamlit UI:**
+#### Step 3: Launch the Streamlit Chat UI
+
+1. **Start the Streamlit UI in another terminal:**
    ```bash
    streamlit run streamlit_ui.py
    ```
+   
    The UI will be available at `http://localhost:8501`
-
-3. **Set up LLM API keys (for chat functionality):**
    
-   **Option A: OpenAI**
-   ```bash
-   export OPENAI_API_KEY='your-openai-api-key-here'
-   export LLM_PROVIDER='openai'
+   You should see output like:
    ```
-   
-   **Option B: AWS Bedrock**
-   ```bash
-   export AWS_ACCESS_KEY_ID='your-aws-access-key'
-   export AWS_SECRET_ACCESS_KEY='your-aws-secret-key'
-   export AWS_DEFAULT_REGION='us-east-1'
-   export BEDROCK_MODEL_ID='anthropic.claude-3-sonnet-20240229-v1:0'
-   export LLM_PROVIDER='bedrock'
+   You can now view your Streamlit app in your browser.
+   Local URL: http://localhost:8501
+   Network URL: http://192.168.1.100:8501
    ```
 
-4. **Access the API documentation:**
-   - FastAPI docs: `http://localhost:8000/docs`
-   - ReDoc: `http://localhost:8000/redoc`
+#### Step 4: Verify Connections
+
+1. **Check MCP Server Status:**
+   - Open `http://localhost:8000/health` in your browser
+   - Should return: `{"status": "healthy"}`
+
+2. **Check Streamlit UI:**
+   - Open `http://localhost:8501` in your browser
+   - The sidebar should show "✅ Server Connected"
+   - Navigate to "Chat Assistant" to test LLM connectivity
+
+3. **Test Chat Functionality:**
+   - In the Streamlit UI, go to "Chat Assistant"
+   - The sidebar should show your LLM provider and model
+   - Try asking: "What are the most critical pricing issues we should address?"
+
+#### Step 5: Access API Documentation
+
+- **FastAPI docs:** `http://localhost:8000/docs`
+- **ReDoc:** `http://localhost:8000/redoc`
 
 ## 📊 Features
 
@@ -185,30 +288,124 @@ export API_HOST="0.0.0.0"
 export API_PORT="8000"
 ```
 
-### LLM Configuration
+### Configuration System
+
+The application uses a centralized configuration system that supports multiple LLM providers and can be easily customized. The system supports both TOML files (recommended) and environment variables.
+
+#### Configuration Files
+
+1. **`config.py`** - Main configuration module with classes for:
+   - `LLMConfig` - LLM provider settings
+   - `ServerConfig` - MCP server connection settings
+   - `StreamlitConfig` - UI settings
+   - `ConfigManager` - Configuration loading and validation
+
+2. **`config.toml.example`** - TOML template configuration file (recommended)
+3. **`config.toml`** - Your actual TOML configuration (created from template)
+4. **`config.env.example`** - Environment variables template
+5. **`.env`** - Your actual environment configuration (created from template)
+
+#### Configuration Priority
+
+The system loads configuration in the following order:
+1. **TOML file** (`config.toml`) - Recommended for most users
+2. **Environment variables** (`.env` file or system environment) - Fallback option
+
+#### Setup Scripts
+
+**Interactive Setup:**
+```bash
+python setup_config.py
+```
+
+**Test Configuration:**
+```bash
+python setup_config.py test
+```
+
+**Show Configuration Summary:**
+```bash
+python setup_config.py summary
+```
+
+**Create TOML Configuration File:**
+```bash
+python setup_config.py create-toml
+```
+
+**Create Environment File:**
+```bash
+python setup_config.py create-env
+```
+
+#### LLM Configuration
 
 The chat assistant supports multiple LLM providers:
 
-**OpenAI Configuration:**
-```bash
-export LLM_PROVIDER="openai"
-export OPENAI_API_KEY="your-openai-api-key"
+**OpenAI Configuration (TOML):**
+```toml
+[llm]
+provider = "openai"
+
+[llm.openai]
+api_key = "your-openai-api-key"
+model = "gpt-3.5-turbo"
+max_tokens = 500
+temperature = 0.7
 ```
 
-**AWS Bedrock Configuration:**
+**AWS Bedrock Configuration (TOML):**
+```toml
+[llm]
+provider = "bedrock"
+
+[llm.bedrock]
+aws_access_key_id = "your-aws-access-key"
+aws_secret_access_key = "your-aws-secret-key"
+aws_region = "us-east-1"
+model_id = "anthropic.claude-3-sonnet-20240229-v1:0"
+max_tokens = 500
+temperature = 0.7
+top_p = 0.9
+```
+
+**Environment Variables (Alternative):**
 ```bash
-export LLM_PROVIDER="bedrock"
-export AWS_ACCESS_KEY_ID="your-aws-access-key"
-export AWS_SECRET_ACCESS_KEY="your-aws-secret-key"
-export AWS_DEFAULT_REGION="us-east-1"
-export BEDROCK_MODEL_ID="anthropic.claude-3-sonnet-20240229-v1:0"
+# OpenAI
+LLM_PROVIDER=openai
+OPENAI_API_KEY=your-openai-api-key
+OPENAI_MODEL=gpt-3.5-turbo
+OPENAI_MAX_TOKENS=500
+OPENAI_TEMPERATURE=0.7
+
+# AWS Bedrock
+LLM_PROVIDER=bedrock
+AWS_ACCESS_KEY_ID=your-aws-access-key
+AWS_SECRET_ACCESS_KEY=your-aws-secret-key
+AWS_DEFAULT_REGION=us-east-1
+BEDROCK_MODEL_ID=anthropic.claude-3-sonnet-20240229-v1:0
+BEDROCK_MAX_TOKENS=500
+BEDROCK_TEMPERATURE=0.7
+BEDROCK_TOP_P=0.9
 ```
 
 **Available Bedrock Models:**
-- `anthropic.claude-3-sonnet-20240229-v1:0` (Claude 3 Sonnet)
-- `anthropic.claude-3-haiku-20240307-v1:0` (Claude 3 Haiku)
-- `amazon.titan-text-express-v1` (Titan Text)
+- `anthropic.claude-3-sonnet-20240229-v1:0` (Claude 3 Sonnet) - **Recommended**
+- `anthropic.claude-3-haiku-20240307-v1:0` (Claude 3 Haiku) - Faster, cheaper
+- `anthropic.claude-3-opus-20240229-v1:0` (Claude 3 Opus) - Most capable
+- `amazon.titan-text-express-v1` (Titan Text Express)
+- `amazon.titan-text-lite-v1` (Titan Text Lite)
 - `ai21.j2-ultra-v1` (Jurassic-2 Ultra)
+- `ai21.j2-mid-v1` (Jurassic-2 Mid)
+- `cohere.command-text-v14` (Cohere Command)
+- `cohere.command-light-text-v14` (Cohere Command Light)
+
+**Available OpenAI Models:**
+- `gpt-3.5-turbo` (GPT-3.5 Turbo) - **Recommended**
+- `gpt-3.5-turbo-16k` (GPT-3.5 Turbo 16K)
+- `gpt-4` (GPT-4)
+- `gpt-4-turbo` (GPT-4 Turbo)
+- `gpt-4-turbo-preview` (GPT-4 Turbo Preview)
 
 ## 📈 Usage Examples
 
@@ -466,14 +663,139 @@ The system tracks several key metrics:
 
 This project is a proof of concept and is provided as-is for educational and demonstration purposes.
 
-## 🆘 Support
+## 🆘 Support & Troubleshooting
+
+### Common Issues
+
+#### MCP Server Connection Issues
+
+**Problem:** Streamlit UI shows "❌ Server Disconnected"
+
+**Solutions:**
+1. **Check if MCP server is running:**
+   ```bash
+   curl http://localhost:8000/health
+   ```
+   Should return: `{"status": "healthy"}`
+
+2. **Verify server is on correct port:**
+   - Default: `http://localhost:8000`
+   - Check your `.env` file: `API_BASE_URL=http://localhost:8000`
+
+3. **Check server logs for errors:**
+   ```bash
+   python mcp_server.py
+   ```
+
+#### LLM Configuration Issues
+
+**Problem:** Chat assistant shows configuration errors
+
+**Solutions:**
+1. **Test your configuration:**
+   ```bash
+   python setup_config.py test
+   ```
+
+2. **Check your configuration file:**
+   ```bash
+   # For TOML configuration
+   cat config.toml
+   
+   # For environment variables
+   cat .env
+   ```
+
+3. **Verify AWS Bedrock access:**
+   - Ensure your AWS credentials have Bedrock permissions
+   - Check if the model is available in your region
+   - Verify your AWS account has Bedrock enabled
+
+4. **Verify OpenAI API key:**
+   - Check if the API key is valid
+   - Ensure you have sufficient credits
+
+#### Streamlit UI Issues
+
+**Problem:** Streamlit app won't start
+
+**Solutions:**
+1. **Check dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+2. **Check port availability:**
+   ```bash
+   lsof -i :8501
+   ```
+
+3. **Try different port:**
+   ```bash
+   streamlit run streamlit_ui.py --server.port 8502
+   ```
+
+### Debugging
+
+#### Enable Debug Logging
+
+**For MCP Server:**
+```bash
+export LOG_LEVEL=DEBUG
+python mcp_server.py
+```
+
+**For Streamlit:**
+```bash
+streamlit run streamlit_ui.py --logger.level=debug
+```
+
+#### Test Individual Components
+
+**Test Configuration:**
+```bash
+python setup_config.py test
+```
+
+**Test MCP Server API:**
+```bash
+curl http://localhost:8000/health
+curl http://localhost:8000/summary
+```
+
+**Test LLM Connection:**
+```bash
+python -c "
+from config import get_config
+config = get_config()
+print(config.get_config_summary())
+"
+```
+
+### Getting Help
 
 For questions or issues:
 
-1. Check the demo output for common issues
-2. Review the API documentation at `http://localhost:8000/docs`
-3. Examine the logs for error messages
-4. Ensure all dependencies are properly installed
+1. **Check the demo output for common issues:**
+   ```bash
+   python demo.py
+   ```
+
+2. **Review the API documentation:**
+   - FastAPI docs: `http://localhost:8000/docs`
+   - ReDoc: `http://localhost:8000/redoc`
+
+3. **Examine the logs for error messages**
+
+4. **Ensure all dependencies are properly installed:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+5. **Check configuration:**
+   ```bash
+   python setup_config.py summary
+   ```
 
 ## 📚 References
 
