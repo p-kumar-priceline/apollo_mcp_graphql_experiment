@@ -5,11 +5,14 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
+    "a2a-sdk>=0.3.5",
     "aiosqlite>=0.21.0",
     "boto3>=1.40.13",
+    "chainlit>=2.7.2",
     "dspy>=2.6.27",
     "fastapi>=0.116.1",
     "fastmcp>=2.10.5",
+    "google-adk>=1.13.0",
     "httpx>=0.28.1",
     "jupyter>=1.1.1",
     "llama-index-llms-ollama>=0.6.2",
@@ -22,7 +25,6 @@ dependencies = [
     "pytest>=8.4.1",
     "scipy>=1.15.3",
     "seaborn>=0.13.2",
-    "streamlit>=1.48.1",
     "uvicorn>=0.35.0",
 ]
 
